@@ -110,11 +110,22 @@ class UndefinedConstraint extends Constraint
 
         // Verify required values
         if (is_object($value)) {
+            if (!($value instanceof UndefinedConstraint) && isset($schema->properties)) {
+                foreach($schema->properties as $property => $val)  { 
+                    if (property_exists($val, 'default') && !property_exists($value, $property)) {
+                        $value->$property = $val->default;
+                    }
+                }
+            }
             if (!($value instanceof UndefinedConstraint) && isset($schema->required) && is_array($schema->required) ) {
                 // Draft 4 - Required is an array of strings - e.g. "required": ["foo", ...]
                 foreach ($schema->required as $required) {
                     if (!property_exists($value, $required)) {
-                        $this->addError((!$path) ? $required : "$path.$required", "The property " . $required . " is required", 'required');
+                        if (property_exists($schema->properties->$required, 'default')) {
+                            $value->$required = $schema->properties->$required->default;
+                        } else {
+                            $this->addError((!$path) ? $required : "$path.$required", "The property " . $required . " is required", 'required');
+                        }
                     }
                 }
             } else if (isset($schema->required) && !is_array($schema->required)) {
